@@ -1,14 +1,17 @@
-$(function() {
+$(function () {
   getBooks();
 
   $('#book-form').on('submit', addBook);
+
+  $('#book-list').on('click', '.save', updateBook);
+  $('#book-list').on('click', '.delete', deleteBook);
 });
 
 function getBooks() {
   $.ajax({
     type: 'GET',
     url: '/books',
-    success: displayBooks
+    success: displayBooks,
   });
 }
 
@@ -16,15 +19,50 @@ function displayBooks(response) {
   console.log(response);
   var $list = $('#book-list');
   $list.empty();
-  response.forEach(function(book) {
+  response.forEach(function (book) {
     var $li = $('<li></li>');
-    $li.append('<p><strong>' + book.title + '</strong></p>');
-    $li.append('<p><em>' + book.author + '</em></p>');
+    var $form = $('<form></form>');
+    $form.append('<input type="text" name="title" value="' + book.title + '"/>');
+    $form.append('<input type="text" name="author" value="' + book.author + '"/>');
     var date = new Date(book.published);
-    $li.append('<p><time>' + date.toDateString() + '</time></p>');
-    $li.append('<p>' + book.edition + '</p>');
-    $li.append('<p>' + book.publisher + '</p>');
+    $form.append('<input type="date" name="published" value="' + date.toISOString().slice(0, 10) + '"/>');
+    $form.append('<input type="text" name="edition" value="' + book.edition + '"/>');
+    $form.append('<input type="text" name="publisher" value="' + book.publisher + '"/>');
+
+    //make a save button and store the id data on it
+    var $saveButton = $('<button class="save">Save!</button>');
+    $saveButton.data('id', book.id);
+    $form.append($saveButton);
+    var $deleteButton = $('<button class="delete">Delete</button>');
+    $deleteButton.data('id', book.id);
+    $form.append($deleteButton);
+    $li.append($form);
     $list.append($li);
+  });
+}
+
+function updateBook(event) {
+  event.preventDefault();
+  var $button = $(this);
+  var $form = $button.closest('form');
+  var data = $form.serialize();
+
+  $.ajax({
+    type: 'PUT',
+    url: '/books/' + $button.data('id'),
+    data: data,
+    success: getBooks,
+  });
+}
+
+function deleteBook(event) {
+  event.preventDefault();
+  var bookId = $(this).data('id');
+
+  $.ajax({
+    type: 'DELETE',
+    url: '/books/' + bookId,
+    success: getBooks,
   });
 }
 
@@ -37,8 +75,9 @@ function addBook(event) {
     type: 'POST',
     url: '/books',
     data: bookData,
-    success: getBooks
+    success: getBooks,
   });
 
   $(this).find('input').val('');
+
 }
